@@ -105,14 +105,23 @@ public class HookConfig implements HookConfigurator {
             log("Failed to call getClassPath: " + e.getMessage());
         }
         
+        String[] vmArgs = null;
         try {
-            List<String> providedDeps = getProvidedDeps(cp, conf, standardVMDebugger).stream().map(p -> toCanonicalPath(p)).collect(Collectors.toList());
-            String[] goodCP = Arrays.stream(cp).filter(p -> !providedDeps.contains(toCanonicalPath(p))).toArray(String[]::new);
-            log("Original CP: " + Arrays.toString(cp));
-            log("Modified CP: " + Arrays.toString(goodCP));
-            cp = goodCP;
-        } catch(Exception e) {
-            log("Failed to modify class path: " + e.getMessage());
+            vmArgs = (String[])conf.getClass().getMethod("getVMArguments").invoke(conf);
+        } catch (Exception e) {
+            log("Failed to call getVMArguments: " + e.getMessage());
+        }
+        
+        if(vmArgs != null && Arrays.stream(vmArgs).anyMatch(s -> s.equals("egds.enable"))) {
+            try {
+                List<String> providedDeps = getProvidedDeps(cp, conf, standardVMDebugger).stream().map(p -> toCanonicalPath(p)).collect(Collectors.toList());
+                String[] goodCP = Arrays.stream(cp).filter(p -> !providedDeps.contains(toCanonicalPath(p))).toArray(String[]::new);
+                log("Original CP: " + Arrays.toString(cp));
+                log("Modified CP: " + Arrays.toString(goodCP));
+                cp = goodCP;
+            } catch(Exception e) {
+                log("Failed to modify class path: " + e.getMessage());
+            }
         }
         
         return cp;
