@@ -3,6 +3,7 @@ package makamys.egds;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,6 +28,7 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.VarInsnNode;
 
 public class HookConfig implements HookConfigurator {
     
@@ -91,13 +93,14 @@ public class HookConfig implements HookConfigurator {
                         }
                         
                         if(old != null) {
-                            m.instructions.insert(old, new MethodInsnNode(Opcodes.INVOKESTATIC, "makamys/egds/HookConfig", "redirectGetClasspath", "(Ljava/lang/Object;)[Ljava/lang/String;"));
+                            m.instructions.insertBefore(old, new VarInsnNode(Opcodes.ALOAD, 0)); // this
+                            m.instructions.insertBefore(old, new MethodInsnNode(Opcodes.INVOKESTATIC, "makamys/egds/HookConfig", "redirectGetClasspath", "(Ljava/lang/Object;Ljava/lang/Object;)[Ljava/lang/String;"));
                             m.instructions.remove(old);
                         }
                     }
                 }
                 
-                ClassWriter writer = new ClassWriter(0);
+                ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
                 classNode.accept(writer);
                 return writer.toByteArray();
             } catch(Exception e) {
@@ -112,7 +115,7 @@ public class HookConfig implements HookConfigurator {
         }
     }
     
-    public static String[] redirectGetClasspath(Object conf) {
+    public static String[] redirectGetClasspath(Object conf, Object standardVMDebugger) {
         String[] cp = new String[] {};
         try {
             cp = (String[])conf.getClass().getMethod("getClassPath").invoke(conf);
@@ -121,7 +124,7 @@ public class HookConfig implements HookConfigurator {
         }
         
         try {
-            List<String> providedDeps = getProvidedDeps(conf, cp).stream().map(p -> toCanonicalPath(p)).collect(Collectors.toList());
+            List<String> providedDeps = getProvidedDeps(cp, conf, standardVMDebugger).stream().map(p -> toCanonicalPath(p)).collect(Collectors.toList());
             String[] goodCP = Arrays.stream(cp).filter(p -> !providedDeps.contains(toCanonicalPath(p))).toArray(String[]::new);
             log("Original CP: " + Arrays.toString(cp));
             log("Modified CP: " + Arrays.toString(goodCP));
@@ -142,14 +145,25 @@ public class HookConfig implements HookConfigurator {
         return "";
     }
     
-    private static List<String> getProvidedDeps(Object conf, String[] cp) {
+    private static List<String> getProvidedDeps(String[] cp, Object conf, Object standardVMDebugger) {
+        File javaHome = null;
+        try {
+            Method mConstructProgramString = standardVMDebugger.getClass().getSuperclass().getDeclaredMethod("constructProgramString", conf.getClass());
+            mConstructProgramString.setAccessible(true);
+            String javaPath = (String)mConstructProgramString.invoke(standardVMDebugger, conf);
+            javaHome = new File(javaPath).getParentFile().getParentFile();
+        } catch (Exception e) {
+            log("Failed to call constructProgramString: " + e.getMessage());
+            return new ArrayList<>();
+        }
+        
         File gradleProjectDir = guessGradleProjectDir(conf, cp);
         
         List<String> files = new ArrayList<>();
         
         if(gradleProjectDir != null) {    
             ProjectConnection connection = GradleConnector.newConnector().forProjectDirectory(gradleProjectDir).connect();
-            IdeaProject be = connection.model(IdeaProject.class).setJavaHome(new File(getJavaHome())).get();
+            IdeaProject be = connection.model(IdeaProject.class).setJavaHome(javaHome).get();
             for(IdeaModule module : be.getModules()) {
                 for(IdeaDependency dep : module.getDependencies()) {
                     if(dep instanceof IdeaSingleEntryLibraryDependency) {
@@ -167,11 +181,6 @@ public class HookConfig implements HookConfigurator {
         log("Provided dependencies: " + files);
         
         return files;
-    }
-    
-    private static String getJavaHome() {
-        // TODO
-        return System.getProperty("edgs.javaHome");
     }
     
     private static File guessGradleProjectDir(Object conf, String[] cp) {
