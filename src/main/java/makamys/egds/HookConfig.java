@@ -14,6 +14,7 @@ import org.eclipse.osgi.storage.bundlefile.BundleEntry;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -67,8 +68,23 @@ public class HookConfig implements HookConfigurator {
                     String methodDesc = m.desc;
                     if(methodName.equals("getCommandLine")) {
                         log("Patching " + className + "#" + methodName + methodDesc);
+                        MethodInsnNode old = null;
+                        for(int i = 0; i < m.instructions.size(); i++) {
+                            AbstractInsnNode ins = m.instructions.get(i);
+                            if(ins instanceof MethodInsnNode) {
+                                MethodInsnNode mi = (MethodInsnNode)ins;
+                                
+                                if(mi.getOpcode() == Opcodes.INVOKEVIRTUAL && mi.owner.equals("org/eclipse/jdt/launching/VMRunnerConfiguration") && mi.name.equals("getClassPath") && mi.desc.equals("()[Ljava/lang/String;")) {
+                                    old = mi;
+                                    break;
+                                }
+                            }
+                        }
                         
-                        m.instructions.insert(new MethodInsnNode(Opcodes.INVOKESTATIC, "makamys/egds/HookConfig", "hook", "()V"));
+                        if(old != null) {
+                            m.instructions.insert(old, new MethodInsnNode(Opcodes.INVOKESTATIC, "makamys/egds/HookConfig", "redirectGetClasspath", "(Ljava/lang/Object;)[Ljava/lang/String;"));
+                            m.instructions.remove(old);
+                        }
                     }
                 }
                 
@@ -87,13 +103,14 @@ public class HookConfig implements HookConfigurator {
         }
     }
     
-    
-    public static void hook() {
-        log("Hook called");
-    }
-    
-    public static void callHook() {
-        hook();
+    public static String[] redirectGetClasspath(Object conf) {
+        try {
+            String[] result = (String[])conf.getClass().getMethod("getClassPath").invoke(conf);
+            return result;
+        } catch (Exception e) {
+            log("Failed to call getClassPath: " + e.getMessage());
+        }
+        return new String[] {};
     }
 
 }
