@@ -32,6 +32,8 @@ import org.objectweb.asm.tree.VarInsnNode;
 
 public class HookConfig implements HookConfigurator {
     
+    private static final boolean ENABLE_LOG = Boolean.parseBoolean(System.getProperty("egds.enableLog", "false"));
+    
     @Override
     public void addHooks(HookRegistry hookRegistry) {
         log("addHooks");
@@ -39,6 +41,8 @@ public class HookConfig implements HookConfigurator {
     }
     
     public static void log(String msg) {
+        if(!ENABLE_LOG) return;
+        
         try {
             FileWriter out = new FileWriter(new File(System.getProperty("java.io.tmpdir"), "hook-config-test.log"), true);
             out.write(msg + "\n");
