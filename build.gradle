@@ -1,15 +1,39 @@
+plugins {
+	id 'com.github.johnrengelman.shadow' version '4.0.4'
+}
+
 apply plugin: 'java'
 
 repositories {
     mavenCentral()
 }
 
-
-
 dependencies {
-    compile "org.eclipse.platform:org.eclipse.osgi:3.18.0"
+	shadow 'org.ow2.asm:asm:9.2'
+	shadow 'org.ow2.asm:asm-tree:9.2'
+	shadow 'org.ow2.asm:asm-analysis:9.2'
+	shadow 'org.ow2.asm:asm-commons:9.2'
+	compile "org.eclipse.platform:org.eclipse.osgi:3.18.0"
 }
 
+configurations {
+	shadow
+	compileOnly.extendsFrom shadow
+}
+
+jar {
+	classifier = 'slim'
+}
+
+shadowJar {
+	classifier = ''
+	relocate 'org.objectweb.asm', 'makamys.egds.repackage.org.objectweb.asm'
+	configurations = [project.configurations.shadow]
+}
+
+artifacts {
+	archives shadowJar
+}
 
 jar {
     manifest {
