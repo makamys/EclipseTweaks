@@ -45,7 +45,6 @@ artifacts {
 jar {
     manifest {
         attributes (
-			'Main-Class': 'makamys.egds.Main',
 			'Premain-Class': 'makamys.egds.EGDS',
         )
     }

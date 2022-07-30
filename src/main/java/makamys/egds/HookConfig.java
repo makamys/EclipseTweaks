@@ -40,28 +40,6 @@ public class HookConfig implements HookConfigurator {
         hookRegistry.addClassLoaderHook(new MyClassLoaderHook());
     }
     
-    public static void log(String msg) {
-        if(!ENABLE_LOG) return;
-        
-        try {
-            FileWriter out = new FileWriter(new File(System.getProperty("java.io.tmpdir"), "hook-config-test.log"), true);
-            out.write(msg + "\n");
-            out.flush();
-        } catch (IOException e) {
-            
-        }
-    }
-    
-    // XXX bad
-    private static String getJarPath() {
-        for(String ext : System.getProperty("osgi.framework.extensions").split(",")) {
-            if(ext.contains("EclipseGradleDependencyScope") && ext.startsWith("reference:file:")) {
-                return ext.substring("reference:file:".length());
-            }
-        }
-        return null;
-    }
-    
     public static class MyClassLoaderHook extends ClassLoaderHook {
         @Override
         public byte[] processClass(String name, byte[] classbytes, ClasspathEntry classpathEntry, BundleEntry entry,
@@ -199,5 +177,27 @@ public class HookConfig implements HookConfigurator {
         }
         return null;
     }
+    
+    // XXX bad
+    private static String getJarPath() {
+        for(String ext : System.getProperty("osgi.framework.extensions").split(",")) {
+            if(ext.contains("EclipseGradleDependencyScope") && ext.startsWith("reference:file:")) {
+                return ext.substring("reference:file:".length());
+            }
+        }
+        return null;
+    }
+    
+    public static void log(String msg) {
+        if(!ENABLE_LOG) return;
+        
+        try {
+            FileWriter out = new FileWriter(new File(System.getProperty("java.io.tmpdir"), "hook-config-test.log"), true);
+            out.write(msg + "\n");
+            out.flush();
+        } catch (IOException e) {
+            
+        }
+    }    
 
 }
