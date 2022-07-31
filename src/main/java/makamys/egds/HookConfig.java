@@ -201,7 +201,7 @@ public class HookConfig implements HookConfigurator {
         if(!ENABLE_LOG) return;
         
         try {
-            FileWriter out = new FileWriter(new File(System.getProperty("java.io.tmpdir"), "hook-config-test.log"), true);
+            FileWriter out = new FileWriter(new File(System.getProperty("java.io.tmpdir"), "EclipseGradleDependencyScope.log"), true);
             out.write(msg + "\n");
             out.flush();
         } catch (IOException e) {
