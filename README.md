@@ -1,3 +1,5 @@
+# EclipseGradleDependencyScope
+
 This is an Eclipse extension that makes compile-only Gradle dependencies get omitted from the classpath when running Gradle projects. This is needed because Eclipse doesn't seem to have a notion of dependency scope.
 
 It works by using the [Equinox Framework Adaptor API](https://wiki.eclipse.org/Adaptor_Hooks) to register a class transformer. The [Gradle Tooling API](https://docs.gradle.org/current/userguide/third_party_integration.html#embedding) is used to query the dependencies of the project and their scopes, and alter the class path accordingly. It's very hacky, and probably won't work for very long.
