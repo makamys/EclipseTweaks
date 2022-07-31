@@ -8,13 +8,22 @@ It was created to be used with Minecraft mods and was only tested with Eclipse 2
 
 ## Usage
 Add this to your `eclipse.ini` below the `-vmargs` line.
-```-Dosgi.framework.extensions=reference:file:/path/to/EclipseGradleDependencyScope-<version>.jar```
+
+```
+-Dosgi.framework.extensions=reference:file:/path/to/EclipseGradleDependencyScope-<version>.jar
+```
 
 Then add this VM argument to each Gradle project you want to activate EGDS for:
-```-Degds.enable```
+
+```
+-Degds.enable
+```
 
 To enable logging, add this to your `eclipse.ini`. The log will be written to your system's temp folder, and named `EclipseGradleDependencyScope.log`.
-```-Degds.enableLog=true```
+
+```
+-Degds.enableLog=true
+```
 
 ## License
 The project is licensed under the [Unlicense](UNLICENSE).
