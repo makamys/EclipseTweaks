@@ -112,7 +112,7 @@ public class HookConfig implements HookConfigurator {
             log("Failed to call getVMArguments: " + e.getMessage());
         }
         
-        if(vmArgs != null && Arrays.stream(vmArgs).anyMatch(s -> s.equals("egds.enable"))) {
+        if(vmArgs != null && Arrays.stream(vmArgs).anyMatch(s -> s.equals("-Degds.enable"))) {
             try {
                 List<String> providedDeps = getProvidedDeps(cp, conf, standardVMDebugger).stream().map(p -> toCanonicalPath(p)).collect(Collectors.toList());
                 String[] goodCP = Arrays.stream(cp).filter(p -> !providedDeps.contains(toCanonicalPath(p))).toArray(String[]::new);
