@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 import org.eclipse.osgi.internal.hookregistry.ClassLoaderHook;
@@ -114,8 +115,7 @@ public class HookConfig implements HookConfigurator {
         
         if(vmArgs != null && Arrays.stream(vmArgs).anyMatch(s -> s.equals("-Degds.enable"))) {
             try {
-                List<String> providedDeps = getProvidedDeps(cp, conf, standardVMDebugger).stream().map(p -> toCanonicalPath(p)).collect(Collectors.toList());
-                String[] goodCP = Arrays.stream(cp).filter(p -> !providedDeps.contains(toCanonicalPath(p))).toArray(String[]::new);
+                String[] goodCP = modifyClasspath(cp, conf, standardVMDebugger);
                 log("Original CP: " + Arrays.toString(cp));
                 log("Modified CP: " + Arrays.toString(goodCP));
                 cp = goodCP;
@@ -125,6 +125,21 @@ public class HookConfig implements HookConfigurator {
         }
         
         return cp;
+    }
+    
+    private static String[] modifyClasspath(String[] cp, Object conf, Object standardVMDebugger) {
+        File gradleProjectDir = guessGradleProjectDir(conf, cp);
+        
+        Config config = Config.load(gradleProjectDir);
+        
+        if(!config.dependencyBlacklist.isEmpty()) {
+            log("Using blacklist");
+            return Arrays.stream(cp).filter(p -> !config.isDependencyBlacklisted(p)).toArray(String[]::new);
+        } else {
+            log("Using getProvidedDeps");
+            List<String> providedDeps = getProvidedDeps(cp, conf, standardVMDebugger).stream().map(p -> toCanonicalPath(p)).collect(Collectors.toList());
+            return Arrays.stream(cp).filter(p -> !providedDeps.contains(toCanonicalPath(p))).toArray(String[]::new);
+        }
     }
     
     private static String toCanonicalPath(String path) {
