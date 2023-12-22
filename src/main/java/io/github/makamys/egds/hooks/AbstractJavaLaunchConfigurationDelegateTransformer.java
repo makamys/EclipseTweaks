@@ -102,7 +102,7 @@ public class AbstractJavaLaunchConfigurationDelegateTransformer implements IClas
         }
         
         private static IRuntimeClasspathEntry[] modifyClasspath(IRuntimeClasspathEntry[] cp, AbstractJavaLaunchConfigurationDelegate launchDelegate, ILaunchConfiguration configuration) throws Exception {
-            File gradleProjectDir = JavaRuntime.getJavaProject(configuration).getPath().toFile();
+            File gradleProjectDir = JavaRuntime.getJavaProject(configuration).getResource().getLocation().toFile();
             
             Config config = Config.load(gradleProjectDir);
             

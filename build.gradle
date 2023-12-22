@@ -28,6 +28,12 @@ dependencies {
     compile("org.eclipse.platform:org.eclipse.equinox.common:3.8.0") {
         transitive false
     }
+    compile("org.eclipse.core:org.eclipse.core.resources:3.7.100") {
+        transitive false
+    }
+    compile("org.eclipse.platform:org.eclipse.core.jobs:3.8.0") {
+        transitive false
+    }
 	
 	shadow "org.gradle:gradle-tooling-api:${toolingApiVersion}"
     // The tooling API need an SLF4J implementation available at runtime, replace this with any other implementation
