@@ -188,8 +188,7 @@ public class HookConfig implements HookConfigurator {
     public static void log(String msg) {
         if(!ENABLE_LOG) return;
         
-        try {
-            FileWriter out = new FileWriter(LOG_PATH, true);
+        try(FileWriter out = new FileWriter(LOG_PATH, true)) {
             out.write(msg + "\n");
             out.flush();
         } catch (IOException e) {
