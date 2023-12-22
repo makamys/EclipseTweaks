@@ -37,6 +37,13 @@ import org.objectweb.asm.tree.VarInsnNode;
 public class HookConfig implements HookConfigurator {
     
     private static final boolean ENABLE_LOG = Boolean.parseBoolean(System.getProperty("egds.enableLog", "false"));
+    private static final File LOG_PATH = new File(System.getProperty("java.io.tmpdir"), "EclipseGradleDependencyScope.log");
+    
+    public HookConfig() {
+        if(ENABLE_LOG) {
+            LOG_PATH.delete();
+        }
+    }
     
     @Override
     public void addHooks(HookRegistry hookRegistry) {
@@ -183,7 +190,7 @@ public class HookConfig implements HookConfigurator {
         if(!ENABLE_LOG) return;
         
         try {
-            FileWriter out = new FileWriter(new File(System.getProperty("java.io.tmpdir"), "EclipseGradleDependencyScope.log"), true);
+            FileWriter out = new FileWriter(LOG_PATH, true);
             out.write(msg + "\n");
             out.flush();
         } catch (IOException e) {
