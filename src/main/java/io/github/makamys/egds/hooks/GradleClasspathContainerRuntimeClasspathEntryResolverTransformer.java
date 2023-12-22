@@ -53,6 +53,9 @@ public class GradleClasspathContainerRuntimeClasspathEntryResolverTransformer im
     
     public static class Hooks {
         public static int modifySupportsTestAttributes(int original) {
+            if(original != 0) {
+                log("Forcing Buildship classpath resolver to use dependency scope");
+            }
             return 0;
         }
     }
