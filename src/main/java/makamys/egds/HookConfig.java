@@ -114,7 +114,7 @@ public class HookConfig implements HookConfigurator {
     
     public static IRuntimeClasspathEntry[] modifyResolveRuntimeClasspath(IRuntimeClasspathEntry[] entries, AbstractJavaLaunchConfigurationDelegate launchDelegate, ILaunchConfiguration configuration) {
         try {
-            if(configuration.getAttribute("org.eclipse.jdt.launching.VM_ARGUMENTS", "").contains("-Degds.enable")) {
+            if(!configuration.getAttribute("org.eclipse.jdt.launching.VM_ARGUMENTS", "").contains("-Degds.disable")) {
                 IRuntimeClasspathEntry[] goodCP = modifyClasspath(entries, launchDelegate, configuration);
                 log("Original CP:\n" + String.join("\n", Arrays.stream(entries).map(e -> "  " + e.toString()).collect(Collectors.toList())));
                 log("Modified CP:\n" + String.join("\n", Arrays.stream(goodCP).map(e -> "  " + e.toString()).collect(Collectors.toList())));
