@@ -8,7 +8,9 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -52,51 +54,33 @@ public class HookConfig implements HookConfigurator {
     }
     
     public static class MyClassLoaderHook extends ClassLoaderHook {
-        @Override
-        public byte[] processClass(String name, byte[] classbytes, ClasspathEntry classpathEntry, BundleEntry entry,
-                ClasspathManager manager) {
-            if(name.equals("org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate")) {
-                return transform(name, classbytes);
-            }
-            return null;
+        private static final Map<String, ClassTransformer> TRANSFORMERS = new HashMap<>();
+        
+        public interface ClassTransformer {
+            boolean transform(ClassNode classNode) throws Exception;
         }
-
-        private byte[] transform(String name, byte[] bytes) {
+        
+        static {
+            TRANSFORMERS.put("org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate", MyClassLoaderHook::transformJavaLaunchConfigurationDelegate);
+        }
+        
+        @Override
+        public byte[] processClass(String name, byte[] bytes, ClasspathEntry classpathEntry, BundleEntry entry,
+                ClasspathManager manager) {
+            ClassTransformer transformer = TRANSFORMERS.get(name);
+            if(transformer == null) return bytes;
+            
+            log("Beginning transformation of " + name);
+            
             boolean ok = false;
             try {
                 ClassNode classNode = new ClassNode();
                 ClassReader classReader = new ClassReader(bytes);
                 classReader.accept(classNode, 0);
-                for(MethodNode m : classNode.methods) {
-                    String className = classNode.name;
-                    String methodName = m.name;
-                    String methodDesc = m.desc;
-                    if(methodName.equals("getClasspath")) {
-                        log("Patching " + className + "#" + methodName + methodDesc);
-                        MethodInsnNode old = null;
-                        for(int i = 0; i < m.instructions.size(); i++) {
-                            AbstractInsnNode ins = m.instructions.get(i);
-                            if(ins instanceof MethodInsnNode) {
-                                MethodInsnNode mi = (MethodInsnNode)ins;
-                                if(mi.getOpcode() == Opcodes.INVOKESTATIC && mi.owner.equals("org/eclipse/jdt/launching/JavaRuntime") && mi.name.equals("resolveRuntimeClasspath") && mi.desc.equals("([Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/debug/core/ILaunchConfiguration;)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;")) {
-                                    old = mi;
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        if(old != null) {
-                            InsnList insns = new InsnList();
-                            // current stack: [entries]
-                            insns.add(new VarInsnNode(Opcodes.ALOAD, 0)); // this
-                            insns.add(new VarInsnNode(Opcodes.ALOAD, 1)); // configuration
-                            insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "makamys/egds/HookConfig", "modifyResolveRuntimeClasspath", "([Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/jdt/launching/AbstractJavaLaunchConfigurationDelegate;Lorg/eclipse/debug/core/ILaunchConfiguration;)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;"));
-                            m.instructions.insert(old, insns);
-                            ok = true;
-                        } else {
-                            log("Failed to find hook point!");
-                        }
-                    }
+                if(transformer.transform(classNode)) {
+                    ok = true;
+                } else {
+                    log("Transformation failed");
                 }
                 
                 ClassWriter writer = new ClassWriter(0);
@@ -114,6 +98,41 @@ public class HookConfig implements HookConfigurator {
                 log("Success!");
             }
             return bytes;
+        }
+        
+        private static boolean transformJavaLaunchConfigurationDelegate(ClassNode classNode) {
+            for(MethodNode m : classNode.methods) {
+                String className = classNode.name;
+                String methodName = m.name;
+                String methodDesc = m.desc;
+                if(methodName.equals("getClasspath")) {
+                    log("Patching " + className + "#" + methodName + methodDesc);
+                    MethodInsnNode old = null;
+                    for(int i = 0; i < m.instructions.size(); i++) {
+                        AbstractInsnNode ins = m.instructions.get(i);
+                        if(ins instanceof MethodInsnNode) {
+                            MethodInsnNode mi = (MethodInsnNode)ins;
+                            if(mi.getOpcode() == Opcodes.INVOKESTATIC && mi.owner.equals("org/eclipse/jdt/launching/JavaRuntime") && mi.name.equals("resolveRuntimeClasspath") && mi.desc.equals("([Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/debug/core/ILaunchConfiguration;)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;")) {
+                                old = mi;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if(old != null) {
+                        InsnList insns = new InsnList();
+                        // current stack: [entries]
+                        insns.add(new VarInsnNode(Opcodes.ALOAD, 0)); // this
+                        insns.add(new VarInsnNode(Opcodes.ALOAD, 1)); // configuration
+                        insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "makamys/egds/HookConfig", "modifyResolveRuntimeClasspath", "([Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/jdt/launching/AbstractJavaLaunchConfigurationDelegate;Lorg/eclipse/debug/core/ILaunchConfiguration;)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;"));
+                        m.instructions.insert(old, insns);
+                        return true;
+                    } else {
+                        log("Failed to find hook point!");
+                    }
+                }
+            }
+            return false;
         }
         
         public boolean addClassPathEntry(ArrayList<ClasspathEntry> cpEntries, String cp, ClasspathManager hostmanager, org.eclipse.osgi.storage.BundleInfo.Generation sourceGeneration) {
