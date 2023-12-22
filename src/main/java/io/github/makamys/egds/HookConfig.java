@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -101,8 +102,10 @@ public class HookConfig implements HookConfigurator {
     public static void log(String msg) {
         if(!ENABLE_LOG) return;
         
+        String timestamp = new SimpleDateFormat("HH:mm:ss").format(new java.util.Date());
+        
         try(FileWriter out = new FileWriter(LOG_PATH, true)) {
-            out.write(msg + "\n");
+            out.write("[" + timestamp + "] " + msg + "\n");
             out.flush();
         } catch (IOException e) {
             
