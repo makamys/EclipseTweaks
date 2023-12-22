@@ -45,7 +45,7 @@ public class GradleClasspathContainerRuntimeClasspathEntryResolverTransformer im
                 insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/hooks/GradleClasspathContainerRuntimeClasspathEntryResolverTransformer$Hooks", "modifySupportsTestAttributes", "(I)I"));
                 m.instructions.insert(old, insns);
                 found += 1;
-                log("Patching modifySupportsTestAttributes call in " + className + "#" + methodName + methodDesc);
+                log("Patching PlatformUtils#supportsTestAttributes call in " + className + "#" + methodName + methodDesc);
             }
         }
         return found > 0;
