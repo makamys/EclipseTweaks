@@ -7,6 +7,9 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.eclipse.debug.core.ILaunchConfiguration;
@@ -116,8 +119,11 @@ public class HookConfig implements HookConfigurator {
         try {
             if(!configuration.getAttribute("org.eclipse.jdt.launching.VM_ARGUMENTS", "").contains("-Degds.disable")) {
                 IRuntimeClasspathEntry[] goodCP = modifyClasspath(entries, launchDelegate, configuration);
-                log("Original CP:\n" + String.join("\n", Arrays.stream(entries).map(e -> "  " + e.toString()).collect(Collectors.toList())));
-                log("Modified CP:\n" + String.join("\n", Arrays.stream(goodCP).map(e -> "  " + e.toString()).collect(Collectors.toList())));
+                
+                log("\nOriginal CP:\n" + toIndentedList(Arrays.asList(entries)) + "\n");
+                log("Modified CP:\n" + toIndentedList(Arrays.asList(goodCP)) + "\n");
+                log("Removed entries:\n" + toIndentedList(subtract(Arrays.asList(entries), Arrays.asList(goodCP))) + "\n");
+                
                 entries = goodCP;
             }
         } catch(Exception e) {
@@ -126,6 +132,16 @@ public class HookConfig implements HookConfigurator {
         }
         
         return entries;
+    }
+    
+    private static String toIndentedList(Collection<?> list) {
+        return String.join("\n", list.stream().map(e -> "  " + e.toString()).collect(Collectors.toList()));
+    }
+    
+    private static <T> Collection<T> subtract(Collection<T> a, Collection<T> b) {
+        Set<T> diff = new HashSet<>(a);
+        diff.removeAll(b);
+        return diff;
     }
     
     private static IRuntimeClasspathEntry[] modifyClasspath(IRuntimeClasspathEntry[] cp, AbstractJavaLaunchConfigurationDelegate launchDelegate, ILaunchConfiguration configuration) throws Exception {
