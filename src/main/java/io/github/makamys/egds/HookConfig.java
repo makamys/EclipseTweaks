@@ -33,8 +33,9 @@ public class HookConfig implements HookConfigurator {
     
     @Override
     public void addHooks(HookRegistry hookRegistry) {
-        log("addHooks");
+        log("Adding class loader hook");
         hookRegistry.addClassLoaderHook(new MyClassLoaderHook());
+        log("Initialization complete");
     }
     
     public static class MyClassLoaderHook extends ClassLoaderHook {
