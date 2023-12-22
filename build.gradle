@@ -6,7 +6,6 @@ apply plugin: 'java'
 
 repositories {
     mavenCentral()
-	maven { url 'https://repo.gradle.org/gradle/libs-releases' }
 }
 
 dependencies {
@@ -34,10 +33,6 @@ dependencies {
     compile("org.eclipse.platform:org.eclipse.core.jobs:3.8.0") {
         transitive false
     }
-	
-	shadow "org.gradle:gradle-tooling-api:${toolingApiVersion}"
-    // The tooling API need an SLF4J implementation available at runtime, replace this with any other implementation
-    runtime 'org.slf4j:slf4j-simple:1.7.10'
 }
 
 configurations {
@@ -52,8 +47,6 @@ jar {
 shadowJar {
 	classifier = ''
 	relocate 'org.objectweb.asm', 'io.github.makamys.egds.repackage.org.objectweb.asm'
-	// relocating the Gradle API breaks it
-	//relocate 'org.gradle', 'io.github.makamys.egds.repackage.org.gradle'
 	configurations = [project.configurations.shadow]
 }
 
