@@ -45,9 +45,9 @@ jar {
 
 shadowJar {
 	classifier = ''
-	relocate 'org.objectweb.asm', 'makamys.egds.repackage.org.objectweb.asm'
+	relocate 'org.objectweb.asm', 'io.github.makamys.egds.repackage.org.objectweb.asm'
 	// relocating the Gradle API breaks it
-	//relocate 'org.gradle', 'makamys.egds.repackage.org.gradle'
+	//relocate 'org.gradle', 'io.github.makamys.egds.repackage.org.gradle'
 	configurations = [project.configurations.shadow]
 }
 
@@ -58,7 +58,7 @@ artifacts {
 jar {
     manifest {
         attributes (
-			'Premain-Class': 'makamys.egds.EGDS',
+			'Premain-Class': 'io.github.makamys.egds.EGDS',
         )
     }
 }

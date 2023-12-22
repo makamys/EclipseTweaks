@@ -1,4 +1,4 @@
-package makamys.egds;
+package io.github.makamys.egds;
 
 import java.io.File;
 import java.io.FileInputStream;

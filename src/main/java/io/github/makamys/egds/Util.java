@@ -1,6 +1,6 @@
-package makamys.egds;
+package io.github.makamys.egds;
 
-import static makamys.egds.HookConfig.log;
+import static io.github.makamys.egds.HookConfig.log;
 
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;

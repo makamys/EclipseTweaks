@@ -1,4 +1,4 @@
-package makamys.egds;
+package io.github.makamys.egds;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -125,7 +125,7 @@ public class HookConfig implements HookConfigurator {
                         // current stack: [entries]
                         insns.add(new VarInsnNode(Opcodes.ALOAD, 0)); // this
                         insns.add(new VarInsnNode(Opcodes.ALOAD, 1)); // configuration
-                        insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "makamys/egds/HookConfig", "modifyResolveRuntimeClasspath", "([Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/jdt/launching/AbstractJavaLaunchConfigurationDelegate;Lorg/eclipse/debug/core/ILaunchConfiguration;)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;"));
+                        insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/HookConfig", "modifyResolveRuntimeClasspath", "([Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/jdt/launching/AbstractJavaLaunchConfigurationDelegate;Lorg/eclipse/debug/core/ILaunchConfiguration;)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;"));
                         m.instructions.insert(old, insns);
                         return true;
                     } else {
@@ -158,7 +158,7 @@ public class HookConfig implements HookConfigurator {
                 if(old != null) {
                     InsnList insns = new InsnList();
                     // current stack: [I]
-                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "makamys/egds/HookConfig", "modifySupportsTestAttributes", "(I)I"));
+                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/HookConfig", "modifySupportsTestAttributes", "(I)I"));
                     m.instructions.insert(old, insns);
                     found += 1;
                     log("Patching modifySupportsTestAttributes call in " + className + "#" + methodName + methodDesc);
