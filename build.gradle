@@ -15,6 +15,19 @@ dependencies {
 	shadow 'org.ow2.asm:asm-analysis:9.2'
 	shadow 'org.ow2.asm:asm-commons:9.2'
 	compile "org.eclipse.platform:org.eclipse.osgi:3.18.0"
+    
+    compile("org.eclipse.jdt:org.eclipse.jdt.launching:3.8.101") {
+        transitive false
+    }
+    compile("org.eclipse.platform:org.eclipse.debug.core:3.10.100") {
+        transitive false
+    }
+    compile("org.eclipse.jdt:org.eclipse.jdt.core:3.7.1") {
+        transitive false
+    }
+    compile("org.eclipse.platform:org.eclipse.equinox.common:3.8.0") {
+        transitive false
+    }
 	
 	shadow "org.gradle:gradle-tooling-api:${toolingApiVersion}"
     // The tooling API need an SLF4J implementation available at runtime, replace this with any other implementation

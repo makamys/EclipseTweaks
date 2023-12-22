@@ -3,30 +3,30 @@ package makamys.egds;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Method;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
 import java.util.stream.Collectors;
 
+import org.eclipse.debug.core.ILaunchConfiguration;
+import org.eclipse.jdt.core.IClasspathAttribute;
+import org.eclipse.jdt.internal.launching.RuntimeClasspathEntry;
+import org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate;
+import org.eclipse.jdt.launching.IRuntimeClasspathEntry;
+import org.eclipse.jdt.launching.JavaRuntime;
 import org.eclipse.osgi.internal.hookregistry.ClassLoaderHook;
 import org.eclipse.osgi.internal.hookregistry.HookConfigurator;
 import org.eclipse.osgi.internal.hookregistry.HookRegistry;
 import org.eclipse.osgi.internal.loader.classpath.ClasspathEntry;
 import org.eclipse.osgi.internal.loader.classpath.ClasspathManager;
 import org.eclipse.osgi.storage.bundlefile.BundleEntry;
-import org.gradle.tooling.GradleConnector;
-import org.gradle.tooling.ProjectConnection;
-import org.gradle.tooling.model.idea.IdeaDependency;
-import org.gradle.tooling.model.idea.IdeaModule;
-import org.gradle.tooling.model.idea.IdeaProject;
-import org.gradle.tooling.model.idea.IdeaSingleEntryLibraryDependency;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
@@ -45,13 +45,14 @@ public class HookConfig implements HookConfigurator {
         @Override
         public byte[] processClass(String name, byte[] classbytes, ClasspathEntry classpathEntry, BundleEntry entry,
                 ClasspathManager manager) {
-            if(name.equals("org.eclipse.jdt.internal.launching.StandardVMDebugger")) {
+            if(name.equals("org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate")) {
                 return transform(name, classbytes);
             }
             return null;
         }
 
         private byte[] transform(String name, byte[] bytes) {
+            boolean ok = false;
             try {
                 ClassNode classNode = new ClassNode();
                 ClassReader classReader = new ClassReader(bytes);
@@ -60,15 +61,14 @@ public class HookConfig implements HookConfigurator {
                     String className = classNode.name;
                     String methodName = m.name;
                     String methodDesc = m.desc;
-                    if(methodName.equals("getCommandLine")) {
+                    if(methodName.equals("getClasspath")) {
                         log("Patching " + className + "#" + methodName + methodDesc);
                         MethodInsnNode old = null;
                         for(int i = 0; i < m.instructions.size(); i++) {
                             AbstractInsnNode ins = m.instructions.get(i);
                             if(ins instanceof MethodInsnNode) {
                                 MethodInsnNode mi = (MethodInsnNode)ins;
-                                
-                                if(mi.getOpcode() == Opcodes.INVOKEVIRTUAL && mi.owner.equals("org/eclipse/jdt/launching/VMRunnerConfiguration") && mi.name.equals("getClassPath") && mi.desc.equals("()[Ljava/lang/String;")) {
+                                if(mi.getOpcode() == Opcodes.INVOKESTATIC && mi.owner.equals("org/eclipse/jdt/launching/JavaRuntime") && mi.name.equals("resolveRuntimeClasspath") && mi.desc.equals("([Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/debug/core/ILaunchConfiguration;)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;")) {
                                     old = mi;
                                     break;
                                 }
@@ -76,18 +76,32 @@ public class HookConfig implements HookConfigurator {
                         }
                         
                         if(old != null) {
-                            m.instructions.insertBefore(old, new VarInsnNode(Opcodes.ALOAD, 0)); // this
-                            m.instructions.insertBefore(old, new MethodInsnNode(Opcodes.INVOKESTATIC, "makamys/egds/HookConfig", "redirectGetClasspath", "(Ljava/lang/Object;Ljava/lang/Object;)[Ljava/lang/String;"));
-                            m.instructions.remove(old);
+                            InsnList insns = new InsnList();
+                            // current stack: [entries]
+                            insns.add(new VarInsnNode(Opcodes.ALOAD, 0)); // this
+                            insns.add(new VarInsnNode(Opcodes.ALOAD, 1)); // configuration
+                            insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "makamys/egds/HookConfig", "modifyResolveRuntimeClasspath", "([Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/jdt/launching/AbstractJavaLaunchConfigurationDelegate;Lorg/eclipse/debug/core/ILaunchConfiguration;)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;"));
+                            m.instructions.insert(old, insns);
+                            ok = true;
+                        } else {
+                            log("Failed to find hook point!");
                         }
                     }
                 }
                 
-                ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+                ClassWriter writer = new ClassWriter(0);
                 classNode.accept(writer);
-                return writer.toByteArray();
+                bytes = writer.toByteArray();
             } catch(Exception e) {
-                e.printStackTrace();
+                log("Encountered exception");
+                StringWriter sw = new StringWriter();
+                PrintWriter pw = new PrintWriter(sw);
+                e.printStackTrace(pw);
+                log(sw.toString());
+                ok = false;
+            }
+            if(ok) {
+                log("Success!");
             }
             return bytes;
         }
@@ -98,108 +112,45 @@ public class HookConfig implements HookConfigurator {
         }
     }
     
-    public static String[] redirectGetClasspath(Object conf, Object standardVMDebugger) {
-        String[] cp = new String[] {};
+    public static IRuntimeClasspathEntry[] modifyResolveRuntimeClasspath(IRuntimeClasspathEntry[] entries, AbstractJavaLaunchConfigurationDelegate launchDelegate, ILaunchConfiguration configuration) {
         try {
-            cp = (String[])conf.getClass().getMethod("getClassPath").invoke(conf);
-        } catch (Exception e) {
-            log("Failed to call getClassPath: " + e.getMessage());
-        }
-        
-        String[] vmArgs = null;
-        try {
-            vmArgs = (String[])conf.getClass().getMethod("getVMArguments").invoke(conf);
-        } catch (Exception e) {
-            log("Failed to call getVMArguments: " + e.getMessage());
-        }
-        
-        if(vmArgs != null && Arrays.stream(vmArgs).anyMatch(s -> s.equals("-Degds.enable"))) {
-            try {
-                String[] goodCP = modifyClasspath(cp, conf, standardVMDebugger);
-                log("Original CP: " + Arrays.toString(cp));
-                log("Modified CP: " + Arrays.toString(goodCP));
-                cp = goodCP;
-            } catch(Exception e) {
-                log("Failed to modify class path: " + e.getMessage());
+            if(configuration.getAttribute("org.eclipse.jdt.launching.VM_ARGUMENTS", "").contains("-Degds.enable")) {
+                IRuntimeClasspathEntry[] goodCP = modifyClasspath(entries, launchDelegate, configuration);
+                log("Original CP:\n" + String.join("\n", Arrays.stream(entries).map(e -> "  " + e.toString()).collect(Collectors.toList())));
+                log("Modified CP:\n" + String.join("\n", Arrays.stream(goodCP).map(e -> "  " + e.toString()).collect(Collectors.toList())));
+                entries = goodCP;
             }
+        } catch(Exception e) {
+            log("Failed to modify classpath");
+            log(e);
         }
         
-        return cp;
+        return entries;
     }
     
-    private static String[] modifyClasspath(String[] cp, Object conf, Object standardVMDebugger) {
-        File gradleProjectDir = guessGradleProjectDir(conf, cp);
+    private static IRuntimeClasspathEntry[] modifyClasspath(IRuntimeClasspathEntry[] cp, AbstractJavaLaunchConfigurationDelegate launchDelegate, ILaunchConfiguration configuration) throws Exception {
+        File gradleProjectDir = JavaRuntime.getJavaProject(configuration).getPath().toFile();
         
         Config config = Config.load(gradleProjectDir);
         
-        if(!config.dependencyBlacklist.isEmpty()) {
+        if(config != null && !config.dependencyBlacklist.isEmpty()) {
             log("Using blacklist");
-            return Arrays.stream(cp).filter(p -> !config.isDependencyBlacklisted(p)).toArray(String[]::new);
+            return Arrays.stream(cp).filter(p -> !config.isDependencyBlacklisted(p.getLocation())).toArray(IRuntimeClasspathEntry[]::new);
         } else {
-            log("Using getProvidedDeps");
-            List<String> providedDeps = getProvidedDeps(cp, conf, standardVMDebugger).stream().map(p -> toCanonicalPath(p)).collect(Collectors.toList());
-            return Arrays.stream(cp).filter(p -> !providedDeps.contains(toCanonicalPath(p))).toArray(String[]::new);
+            log("Using extra classpath attributes");
+            return Arrays.stream(cp).filter(p -> !isMissingScope(p)).toArray(IRuntimeClasspathEntry[]::new);
         }
     }
     
-    private static String toCanonicalPath(String path) {
-        try {
-            return new File(path).getCanonicalPath();
-        } catch (IOException e) {
-            log("Failed to canonicalize " + path + ": " + e.getMessage());
-        }
-        return "";
-    }
-    
-    private static List<String> getProvidedDeps(String[] cp, Object conf, Object standardVMDebugger) {
-        File javaHome = null;
-        try {
-            Method mConstructProgramString = standardVMDebugger.getClass().getSuperclass().getDeclaredMethod("constructProgramString", conf.getClass());
-            mConstructProgramString.setAccessible(true);
-            String javaPath = (String)mConstructProgramString.invoke(standardVMDebugger, conf);
-            javaHome = new File(javaPath).getParentFile().getParentFile();
-        } catch (Exception e) {
-            log("Failed to call constructProgramString: " + e.getMessage());
-            return new ArrayList<>();
-        }
-        
-        File gradleProjectDir = guessGradleProjectDir(conf, cp);
-        
-        List<String> files = new ArrayList<>();
-        
-        if(gradleProjectDir != null) {    
-            ProjectConnection connection = GradleConnector.newConnector().forProjectDirectory(gradleProjectDir).connect();
-            IdeaProject be = connection.model(IdeaProject.class).setJavaHome(javaHome).get();
-            for(IdeaModule module : be.getModules()) {
-                for(IdeaDependency dep : module.getDependencies()) {
-                    if(dep instanceof IdeaSingleEntryLibraryDependency) {
-                        IdeaSingleEntryLibraryDependency ldep = (IdeaSingleEntryLibraryDependency)dep;
-                        if(ldep.getScope().getScope().toLowerCase().equals("provided")) {
-                            files.add(ldep.getFile().getPath());
-                        }
-                    }
+    private static boolean isMissingScope(IRuntimeClasspathEntry p) {
+        if(p instanceof RuntimeClasspathEntry) {
+            for(IClasspathAttribute att : p.getClasspathEntry().getExtraAttributes()) {
+                if(att.getName().equals("gradle_used_by_scope") && att.getValue().isEmpty()) {
+                    return true;
                 }
             }
-        } else {
-            log("Failed to guess Gradle project dir. cp: " + Arrays.toString(cp));
         }
-        
-        log("Provided dependencies: " + files);
-        
-        return files;
-    }
-    
-    private static File guessGradleProjectDir(Object conf, String[] cp) {
-        for(String string : cp) {
-            File f = new File(string);
-            while(f != null && !(f.isDirectory() && (f.getName().equals("bin") || f.getName().equals("build")))) {
-                f = f.getParentFile();
-            }
-            if(f != null) {
-                return f.getParentFile();
-            }
-        }
-        return null;
+        return false;
     }
     
     // XXX bad
@@ -222,6 +173,13 @@ public class HookConfig implements HookConfigurator {
         } catch (IOException e) {
             
         }
-    }    
+    }
+    
+    public static void log(Exception e) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+        log(sw.toString());
+    }
 
 }
