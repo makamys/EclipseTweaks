@@ -136,8 +136,35 @@ public class HookConfig implements HookConfigurator {
             return false;
         }
         
-        private static boolean transformGradleResolver(ClassNode cn) {
-            throw new IllegalStateException("not implemented");
+        private static boolean transformGradleResolver(ClassNode classNode) {
+            int found = 0;
+            for(MethodNode m : classNode.methods) {
+                String className = classNode.name;
+                String methodName = m.name;
+                String methodDesc = m.desc;
+                
+                MethodInsnNode old = null;
+                for(int i = 0; i < m.instructions.size(); i++) {
+                    AbstractInsnNode ins = m.instructions.get(i);
+                    if(ins instanceof MethodInsnNode) {
+                        MethodInsnNode mi = (MethodInsnNode)ins;
+                        if(mi.getOpcode() == Opcodes.INVOKESTATIC && mi.owner.equals("org/eclipse/buildship/core/internal/util/eclipse/PlatformUtils") && mi.name.equals("supportsTestAttributes") && mi.desc.equals("()Z")) {
+                            old = mi;
+                            break;
+                        }
+                    }
+                }
+                
+                if(old != null) {
+                    InsnList insns = new InsnList();
+                    // current stack: [I]
+                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "makamys/egds/HookConfig", "modifySupportsTestAttributes", "(I)I"));
+                    m.instructions.insert(old, insns);
+                    found += 1;
+                    log("Patching modifySupportsTestAttributes call in " + className + "#" + methodName + methodDesc);
+                }
+            }
+            return found > 0;
         }
         
         public boolean addClassPathEntry(ArrayList<ClasspathEntry> cpEntries, String cp, ClasspathManager hostmanager, org.eclipse.osgi.storage.BundleInfo.Generation sourceGeneration) {
@@ -197,6 +224,10 @@ public class HookConfig implements HookConfigurator {
             }
         }
         return false;
+    }
+    
+    public static int modifySupportsTestAttributes(int original) {
+        return 0;
     }
     
     // XXX bad
