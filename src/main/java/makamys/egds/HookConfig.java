@@ -128,7 +128,6 @@ public class HookConfig implements HookConfigurator {
                 IRuntimeClasspathEntry[] goodCP = modifyClasspath(entries, launchDelegate, configuration);
                 
                 log("\nOriginal CP:\n" + toIndentedList(Arrays.asList(entries)) + "\n");
-                log("Modified CP:\n" + toIndentedList(Arrays.asList(goodCP)) + "\n");
                 log("Removed entries:\n" + toIndentedList(subtract(Arrays.asList(entries), Arrays.asList(goodCP))) + "\n");
                 
                 entries = goodCP;
