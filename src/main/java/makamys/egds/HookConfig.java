@@ -62,6 +62,7 @@ public class HookConfig implements HookConfigurator {
         
         static {
             TRANSFORMERS.put("org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate", MyClassLoaderHook::transformJavaLaunchConfigurationDelegate);
+            TRANSFORMERS.put("org.eclipse.buildship.core.internal.workspace.GradleClasspathContainerRuntimeClasspathEntryResolver", MyClassLoaderHook::transformGradleResolver);
         }
         
         @Override
@@ -133,6 +134,10 @@ public class HookConfig implements HookConfigurator {
                 }
             }
             return false;
+        }
+        
+        private static boolean transformGradleResolver(ClassNode cn) {
+            throw new IllegalStateException("not implemented");
         }
         
         public boolean addClassPathEntry(ArrayList<ClasspathEntry> cpEntries, String cp, ClasspathManager hostmanager, org.eclipse.osgi.storage.BundleInfo.Generation sourceGeneration) {
