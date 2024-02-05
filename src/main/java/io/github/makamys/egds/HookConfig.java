@@ -22,6 +22,7 @@ import io.github.makamys.egds.hooks.AbstractJavaLaunchConfigurationDelegateTrans
 import io.github.makamys.egds.hooks.GradleClasspathContainerRuntimeClasspathEntryResolverTransformer;
 import io.github.makamys.egds.hooks.JavaRuntimeTransformer;
 import io.github.makamys.egds.hooks.LaunchConfigurationScopeTransformer;
+import io.github.makamys.egds.hooks.SourceLookupFacilityTransformer;
 
 public class HookConfig implements HookConfigurator {
     
@@ -49,6 +50,8 @@ public class HookConfig implements HookConfigurator {
             TRANSFORMERS.put("org.eclipse.jdt.launching.JavaRuntime", new JavaRuntimeTransformer());
             TRANSFORMERS.put("org.eclipse.buildship.core.internal.workspace.GradleClasspathContainerRuntimeClasspathEntryResolver", new GradleClasspathContainerRuntimeClasspathEntryResolverTransformer());
             TRANSFORMERS.put("org.eclipse.buildship.core.internal.launch.LaunchConfigurationScope", new LaunchConfigurationScopeTransformer());
+            TRANSFORMERS.put("org.eclipse.debug.internal.ui.sourcelookup.SourceLookupFacility$SourceDisplayJob", new SourceLookupFacilityTransformer(1));
+            TRANSFORMERS.put("org.eclipse.debug.internal.ui.sourcelookup.SourceLookupFacility$SourceLookupJob", new SourceLookupFacilityTransformer(2));
         }
         
         @Override
