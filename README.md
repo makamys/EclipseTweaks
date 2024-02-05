@@ -14,11 +14,12 @@ Add this to your `eclipse.ini` below the `-vmargs` line:
 -Dosgi.framework.extensions=reference:file:/path/to/EclipseGradleDependencyScope-<version>.jar
 ```
 
-EGDS will automatically apply to every run configuration. You can force it to be disabled for one by adding this to its VM flags:
+EGDS will automatically apply to every run configuration, and will exclude dependencies not in the `main` scope by default.
 
-```
--Degds.disable
-```
+These VM flags can be added to run configurations to customize them:
+
+- `-Degds.scope=myScope`: Changes the scope to `myScope`. Multiple values can be specified by separating them with commas.
+- `-Degds.disable`: Disable EGDS for one project.
 
 To enable logging, add this to your `eclipse.ini`. The log will be written to your system's temp folder, and named `EclipseGradleDependencyScope.log`.
 
