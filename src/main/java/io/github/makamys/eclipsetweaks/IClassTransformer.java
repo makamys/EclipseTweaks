@@ -1,4 +1,4 @@
-package io.github.makamys.egds;
+package io.github.makamys.eclipsetweaks;
 
 import org.objectweb.asm.tree.ClassNode;
 

@@ -1,6 +1,6 @@
-package io.github.makamys.egds.hooks;
+package io.github.makamys.eclipsetweaks.modules.gradlescope.asm;
 
-import static io.github.makamys.egds.HookConfig.log;
+import static io.github.makamys.eclipsetweaks.EclipseTweaks.log;
 
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.jdt.core.IJavaProject;
@@ -12,8 +12,8 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
-import io.github.makamys.egds.IClassTransformer;
-import io.github.makamys.egds.helpers.ClasspathModificationHelper;
+import io.github.makamys.eclipsetweaks.IClassTransformer;
+import io.github.makamys.eclipsetweaks.modules.gradlescope.ClasspathModificationHelper;
 
 public class GradleClasspathContainerRuntimeClasspathEntryResolverTransformer implements IClassTransformer {
     
@@ -41,7 +41,7 @@ public class GradleClasspathContainerRuntimeClasspathEntryResolverTransformer im
                 
                 InsnList preInsns = new InsnList();
                 preInsns.add(new VarInsnNode(Opcodes.ALOAD, 2)); // ILaunchConfiguration
-                preInsns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/hooks/GradleClasspathContainerRuntimeClasspathEntryResolverTransformer$Hooks", "captureLaunchConfiguration", "(Lorg/eclipse/debug/core/ILaunchConfiguration;)V"));
+                preInsns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/eclipsetweaks/modules/gradlescope/asm/GradleClasspathContainerRuntimeClasspathEntryResolverTransformer$Hooks", "captureLaunchConfiguration", "(Lorg/eclipse/debug/core/ILaunchConfiguration;)V"));
                 m.instructions.insert(preInsns);
                 found++;
             } else if(methodName.equals("resolveRuntimeClasspathEntry") && methodDesc.equals("(Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/jdt/core/IJavaProject;Lorg/eclipse/buildship/core/internal/launch/LaunchConfigurationScope;ZZ)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;")) {
@@ -63,7 +63,7 @@ public class GradleClasspathContainerRuntimeClasspathEntryResolverTransformer im
                     InsnList insns = new InsnList();
                     // current stack: [I]
                     insns.add(new VarInsnNode(Opcodes.ALOAD, 1)); // IJavaProject
-                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/hooks/GradleClasspathContainerRuntimeClasspathEntryResolverTransformer$Hooks", "modifySupportsTestAttributes", "(ILorg/eclipse/jdt/core/IJavaProject;)I"));
+                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/eclipsetweaks/modules/gradlescope/asm/GradleClasspathContainerRuntimeClasspathEntryResolverTransformer$Hooks", "modifySupportsTestAttributes", "(ILorg/eclipse/jdt/core/IJavaProject;)I"));
                     m.instructions.insert(old, insns);
                     found++;
                 } else {
@@ -81,7 +81,7 @@ public class GradleClasspathContainerRuntimeClasspathEntryResolverTransformer im
         }
         
         public static int modifySupportsTestAttributes(int original, IJavaProject project) {
-            if(ClasspathModificationHelper.egdsEnabled) {
+            if(ClasspathModificationHelper.enabled) {
                 if(original != 0) {
                     log("Forcing Buildship classpath resolver to use dependency scope");
                 }

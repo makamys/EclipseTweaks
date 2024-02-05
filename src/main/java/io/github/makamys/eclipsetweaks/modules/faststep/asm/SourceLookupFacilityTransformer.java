@@ -1,6 +1,6 @@
-package io.github.makamys.egds.hooks;
+package io.github.makamys.eclipsetweaks.modules.faststep.asm;
 
-import static io.github.makamys.egds.HookConfig.log;
+import static io.github.makamys.eclipsetweaks.EclipseTweaks.log;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -8,7 +8,8 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
-import io.github.makamys.egds.IClassTransformer;
+
+import io.github.makamys.eclipsetweaks.IClassTransformer;
 
 public class SourceLookupFacilityTransformer implements IClassTransformer {
     private final int expected;
@@ -48,7 +49,7 @@ public class SourceLookupFacilityTransformer implements IClassTransformer {
                 
                 InsnList insns = new InsnList();
                 // current stack: [J]
-                insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/hooks/SourceLookupFacilityTransformer$Hooks", "modifyDelay", "(J)J"));
+                insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/eclipsetweaks/modules/faststep/asm/SourceLookupFacilityTransformer$Hooks", "modifyDelay", "(J)J"));
                 m.instructions.insertBefore(old, insns);
                 found++;
             }

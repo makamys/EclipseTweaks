@@ -1,6 +1,6 @@
-package io.github.makamys.egds.helpers;
+package io.github.makamys.eclipsetweaks.modules.gradlescope;
 
-import static io.github.makamys.egds.HookConfig.log;
+import static io.github.makamys.eclipsetweaks.EclipseTweaks.log;
 
 import java.io.File;
 import java.util.Arrays;
@@ -10,12 +10,11 @@ import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate;
 import org.eclipse.jdt.launching.JavaRuntime;
 
-import io.github.makamys.egds.Config;
-import io.github.makamys.egds.Util;
+import io.github.makamys.eclipsetweaks.Util;
 
 /** Store state used by hooks during the invocation of {@link AbstractJavaLaunchConfigurationDelegate#getClasspath(ILaunchConfiguration)}. */
 public class ClasspathModificationHelper {
-    public static boolean egdsEnabled;
+    public static boolean enabled;
     public static List<String> scopes;
     public static Config config;
     
@@ -26,9 +25,9 @@ public class ClasspathModificationHelper {
             String args = configuration.getAttribute("org.eclipse.jdt.launching.VM_ARGUMENTS", "");
             log("Preparing to launch");
             log("VM args: " + args);
-            egdsEnabled = !args.contains("-Degds.disable");
+            enabled = !args.contains("-DeclipseTweaks.gradleScope.enabled=false");
             for(String kv : args.split(" ")) {
-                if(kv.startsWith("-Degds.scope=")) {
+                if(kv.startsWith("-DeclipseTweaks.gradleScope=")) {
                     scopes = Arrays.asList(kv.split("=")[1].split(","));
                 }
             }
@@ -40,7 +39,7 @@ public class ClasspathModificationHelper {
             
             config = Config.load(gradleProjectDir);
             
-            log("  Enabled: " + egdsEnabled);
+            log("  Enabled: " + enabled);
             log("  Scopes: " + scopes);
             
             if(useScopes()) {
@@ -49,14 +48,14 @@ public class ClasspathModificationHelper {
                 log("Using blacklist");
             }
         } catch(Exception e) {
-            egdsEnabled = false;
+            enabled = false;
             log("Failed to capture launch configuration");
             log(e);
         }
     }
     
     public static void reset() {
-        egdsEnabled = false;
+        enabled = false;
         scopes = null;
         config = null;
     }

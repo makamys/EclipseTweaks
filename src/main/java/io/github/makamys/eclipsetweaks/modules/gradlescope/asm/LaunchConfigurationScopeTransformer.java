@@ -1,6 +1,6 @@
-package io.github.makamys.egds.hooks;
+package io.github.makamys.eclipsetweaks.modules.gradlescope.asm;
 
-import static io.github.makamys.egds.HookConfig.log;
+import static io.github.makamys.eclipsetweaks.EclipseTweaks.log;
 
 import java.util.HashSet;
 import java.util.Optional;
@@ -15,8 +15,8 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
-import io.github.makamys.egds.IClassTransformer;
-import io.github.makamys.egds.helpers.ClasspathModificationHelper;
+import io.github.makamys.eclipsetweaks.IClassTransformer;
+import io.github.makamys.eclipsetweaks.modules.gradlescope.ClasspathModificationHelper;
 
 public class LaunchConfigurationScopeTransformer implements IClassTransformer {
     /**
@@ -51,7 +51,7 @@ public class LaunchConfigurationScopeTransformer implements IClassTransformer {
                     InsnList insns = new InsnList();
                     // current stack: [Ljava/util/Optional;]
                     insns.add(new VarInsnNode(Opcodes.ALOAD, 0)); // configuration
-                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/hooks/LaunchConfigurationScopeTransformer$Hooks", "modifyScope", "(Ljava/util/Optional;Lorg/eclipse/debug/core/ILaunchConfiguration;)Ljava/util/Optional;"));
+                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/eclipsetweaks/modules/gradlescope/asm/LaunchConfigurationScopeTransformer$Hooks", "modifyScope", "(Ljava/util/Optional;Lorg/eclipse/debug/core/ILaunchConfiguration;)Ljava/util/Optional;"));
                     m.instructions.insert(old, insns);
                     return true;
                 } else {
@@ -64,7 +64,7 @@ public class LaunchConfigurationScopeTransformer implements IClassTransformer {
     
     public static class Hooks {
         public static Optional<Set<String>> modifyScope(Optional<Set<String>> original, ILaunchConfiguration config) {
-            if(ClasspathModificationHelper.egdsEnabled && !ClasspathModificationHelper.scopes.isEmpty()) {
+            if(ClasspathModificationHelper.enabled && !ClasspathModificationHelper.scopes.isEmpty()) {
                 log("Forcing scope " + ClasspathModificationHelper.scopes);
                 return Optional.of(new HashSet<>(ClasspathModificationHelper.scopes));
             }

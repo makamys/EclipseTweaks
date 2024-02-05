@@ -46,7 +46,7 @@ jar {
 
 shadowJar {
 	classifier = ''
-	relocate 'org.objectweb.asm', 'io.github.makamys.egds.repackage.org.objectweb.asm'
+	relocate 'org.objectweb.asm', 'io.github.makamys.eclipsetweaks.repackage.org.objectweb.asm'
 	configurations = [project.configurations.shadow]
 }
 
@@ -54,10 +54,3 @@ artifacts {
 	archives shadowJar
 }
 
-jar {
-    manifest {
-        attributes (
-			'Premain-Class': 'io.github.makamys.egds.EGDS',
-        )
-    }
-}

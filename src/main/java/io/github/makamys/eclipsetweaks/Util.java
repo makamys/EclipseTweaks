@@ -1,6 +1,6 @@
-package io.github.makamys.egds;
+package io.github.makamys.eclipsetweaks;
 
-import static io.github.makamys.egds.HookConfig.log;
+import static io.github.makamys.eclipsetweaks.EclipseTweaks.log;
 
 import java.util.Collection;
 import java.util.HashSet;

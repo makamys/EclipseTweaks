@@ -1,4 +1,4 @@
-package io.github.makamys.egds;
+package io.github.makamys.eclipsetweaks;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -18,18 +18,18 @@ import org.eclipse.osgi.storage.bundlefile.BundleEntry;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
-import io.github.makamys.egds.hooks.AbstractJavaLaunchConfigurationDelegateTransformer;
-import io.github.makamys.egds.hooks.GradleClasspathContainerRuntimeClasspathEntryResolverTransformer;
-import io.github.makamys.egds.hooks.JavaRuntimeTransformer;
-import io.github.makamys.egds.hooks.LaunchConfigurationScopeTransformer;
-import io.github.makamys.egds.hooks.SourceLookupFacilityTransformer;
 
-public class HookConfig implements HookConfigurator {
+import io.github.makamys.eclipsetweaks.modules.faststep.FastStepModule;
+import io.github.makamys.eclipsetweaks.modules.gradlescope.GradleScopeModule;
+
+public class EclipseTweaks implements HookConfigurator {
     
-    private static final boolean ENABLE_LOG = Boolean.parseBoolean(System.getProperty("egds.enableLog", "false"));
-    private static final File LOG_PATH = new File(System.getProperty("java.io.tmpdir"), "EclipseGradleDependencyScope.log");
+    private static final Map<String, IClassTransformer> TRANSFORMERS = new HashMap<>();
     
-    public HookConfig() {
+    private static final boolean ENABLE_LOG = Boolean.parseBoolean(System.getProperty("eclipseTweaks.log", "false"));
+    private static final File LOG_PATH = new File(System.getProperty("java.io.tmpdir"), "EclipseTweaks.log");
+    
+    public EclipseTweaks() {
         if(ENABLE_LOG) {
             LOG_PATH.delete();
         }
@@ -37,22 +37,27 @@ public class HookConfig implements HookConfigurator {
     
     @Override
     public void addHooks(HookRegistry hookRegistry) {
+        log("Initializing modules");
+        initializeModules();
         log("Adding class loader hook");
         hookRegistry.addClassLoaderHook(new MyClassLoaderHook());
         log("Initialization complete");
     }
     
-    public static class MyClassLoaderHook extends ClassLoaderHook {
-        private static final Map<String, IClassTransformer> TRANSFORMERS = new HashMap<>();
-        
-        static {
-            TRANSFORMERS.put("org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate", new AbstractJavaLaunchConfigurationDelegateTransformer());
-            TRANSFORMERS.put("org.eclipse.jdt.launching.JavaRuntime", new JavaRuntimeTransformer());
-            TRANSFORMERS.put("org.eclipse.buildship.core.internal.workspace.GradleClasspathContainerRuntimeClasspathEntryResolver", new GradleClasspathContainerRuntimeClasspathEntryResolverTransformer());
-            TRANSFORMERS.put("org.eclipse.buildship.core.internal.launch.LaunchConfigurationScope", new LaunchConfigurationScopeTransformer());
-            TRANSFORMERS.put("org.eclipse.debug.internal.ui.sourcelookup.SourceLookupFacility$SourceDisplayJob", new SourceLookupFacilityTransformer(1));
-            TRANSFORMERS.put("org.eclipse.debug.internal.ui.sourcelookup.SourceLookupFacility$SourceLookupJob", new SourceLookupFacilityTransformer(2));
+    private void initializeModules() {
+        initModule(GradleScopeModule.INSTANCE);
+        initModule(FastStepModule.INSTANCE);
+    }
+    
+    private static void initModule(IModule module) {
+        if(module.initModule(TRANSFORMERS)) {
+            log("Initialized module " + module.getClass().getSimpleName());
+        } else {
+            log("Skipped module " + module.getClass().getSimpleName());
         }
+    }
+
+    public static class MyClassLoaderHook extends ClassLoaderHook {
         
         @Override
         public byte[] processClass(String name, byte[] bytes, ClasspathEntry classpathEntry, BundleEntry entry,
@@ -99,7 +104,7 @@ public class HookConfig implements HookConfigurator {
     // XXX bad
     private static String getJarPath() {
         for(String ext : System.getProperty("osgi.framework.extensions").split(",")) {
-            if(ext.contains("EclipseGradleDependencyScope") && ext.startsWith("reference:file:")) {
+            if(ext.contains("EclipseTweaks") && ext.startsWith("reference:file:")) {
                 return ext.substring("reference:file:".length());
             }
         }

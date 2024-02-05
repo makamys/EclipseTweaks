@@ -1,6 +1,6 @@
-package io.github.makamys.egds.hooks;
+package io.github.makamys.eclipsetweaks.modules.gradlescope.asm;
 
-import static io.github.makamys.egds.HookConfig.log;
+import static io.github.makamys.eclipsetweaks.EclipseTweaks.log;
 
 import java.util.Arrays;
 import org.eclipse.debug.core.ILaunchConfiguration;
@@ -17,9 +17,9 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
-import io.github.makamys.egds.IClassTransformer;
-import io.github.makamys.egds.Util;
-import io.github.makamys.egds.helpers.ClasspathModificationHelper;
+import io.github.makamys.eclipsetweaks.IClassTransformer;
+import io.github.makamys.eclipsetweaks.Util;
+import io.github.makamys.eclipsetweaks.modules.gradlescope.ClasspathModificationHelper;
 
 public class AbstractJavaLaunchConfigurationDelegateTransformer implements IClassTransformer {
     
@@ -43,7 +43,7 @@ public class AbstractJavaLaunchConfigurationDelegateTransformer implements IClas
                 
                 InsnList preInsns = new InsnList();
                 preInsns.add(new VarInsnNode(Opcodes.ALOAD, 1)); // ILaunchConfiguration
-                preInsns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/hooks/AbstractJavaLaunchConfigurationDelegateTransformer$Hooks", "captureLaunchConfiguration", "(Lorg/eclipse/debug/core/ILaunchConfiguration;)V"));
+                preInsns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/eclipsetweaks/modules/gradlescope/asm/AbstractJavaLaunchConfigurationDelegateTransformer$Hooks", "captureLaunchConfiguration", "(Lorg/eclipse/debug/core/ILaunchConfiguration;)V"));
                 m.instructions.insert(preInsns);
                 
                 MethodInsnNode old = null;
@@ -63,7 +63,7 @@ public class AbstractJavaLaunchConfigurationDelegateTransformer implements IClas
                     // current stack: [entries]
                     insns.add(new VarInsnNode(Opcodes.ALOAD, 0)); // this
                     insns.add(new VarInsnNode(Opcodes.ALOAD, 1)); // configuration
-                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/hooks/AbstractJavaLaunchConfigurationDelegateTransformer$Hooks", "modifyResolveRuntimeClasspath", "([Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/jdt/launching/AbstractJavaLaunchConfigurationDelegate;Lorg/eclipse/debug/core/ILaunchConfiguration;)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;"));
+                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/eclipsetweaks/modules/gradlescope/asm/AbstractJavaLaunchConfigurationDelegateTransformer$Hooks", "modifyResolveRuntimeClasspath", "([Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/jdt/launching/AbstractJavaLaunchConfigurationDelegate;Lorg/eclipse/debug/core/ILaunchConfiguration;)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;"));
                     m.instructions.insert(old, insns);
                     return true;
                 } else {
@@ -81,7 +81,7 @@ public class AbstractJavaLaunchConfigurationDelegateTransformer implements IClas
         
         public static IRuntimeClasspathEntry[] modifyResolveRuntimeClasspath(IRuntimeClasspathEntry[] entries, AbstractJavaLaunchConfigurationDelegate launchDelegate, ILaunchConfiguration configuration) {
             try {
-                if(ClasspathModificationHelper.egdsEnabled) {
+                if(ClasspathModificationHelper.enabled) {
                     IRuntimeClasspathEntry[] goodCP = modifyClasspath(entries, launchDelegate, configuration);
                     
                     log("\nOriginal final CP:\n" + Util.toIndentedList(Arrays.asList(entries)) + "\n");

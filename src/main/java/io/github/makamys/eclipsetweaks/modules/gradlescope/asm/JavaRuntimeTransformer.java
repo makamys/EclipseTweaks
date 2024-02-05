@@ -1,6 +1,6 @@
-package io.github.makamys.egds.hooks;
+package io.github.makamys.eclipsetweaks.modules.gradlescope.asm;
 
-import static io.github.makamys.egds.HookConfig.log;
+import static io.github.makamys.eclipsetweaks.EclipseTweaks.log;
 
 import java.util.Arrays;
 import org.eclipse.jdt.core.IClasspathEntry;
@@ -11,9 +11,9 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
-import io.github.makamys.egds.IClassTransformer;
-import io.github.makamys.egds.Util;
-import io.github.makamys.egds.helpers.ClasspathModificationHelper;
+import io.github.makamys.eclipsetweaks.IClassTransformer;
+import io.github.makamys.eclipsetweaks.Util;
+import io.github.makamys.eclipsetweaks.modules.gradlescope.ClasspathModificationHelper;
 
 public class JavaRuntimeTransformer implements IClassTransformer {
     
@@ -49,7 +49,7 @@ public class JavaRuntimeTransformer implements IClassTransformer {
                 
                 if(old != null) {
                     InsnList insns = new InsnList();
-                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/hooks/JavaRuntimeTransformer$Hooks", "modifyGetRawClasspath", "([Lorg/eclipse/jdt/core/IClasspathEntry;)[Lorg/eclipse/jdt/core/IClasspathEntry;"));
+                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/eclipsetweaks/modules/gradlescope/asm/JavaRuntimeTransformer$Hooks", "modifyGetRawClasspath", "([Lorg/eclipse/jdt/core/IClasspathEntry;)[Lorg/eclipse/jdt/core/IClasspathEntry;"));
                     m.instructions.insert(old, insns);
                     return true;
                 } else {
@@ -63,7 +63,7 @@ public class JavaRuntimeTransformer implements IClassTransformer {
     public static class Hooks {
         public static IClasspathEntry[] modifyGetRawClasspath(IClasspathEntry[] entries) {
             try {
-                if(ClasspathModificationHelper.egdsEnabled) {
+                if(ClasspathModificationHelper.enabled) {
                     if(ClasspathModificationHelper.useScopes()) {
                         IClasspathEntry[] goodCP = Arrays.stream(entries).filter(p -> !AbstractJavaLaunchConfigurationDelegateTransformer.Hooks.isMissingScope(p)).toArray(IClasspathEntry[]::new);
                         
