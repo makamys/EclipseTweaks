@@ -4,7 +4,6 @@ import static io.github.makamys.egds.HookConfig.log;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;

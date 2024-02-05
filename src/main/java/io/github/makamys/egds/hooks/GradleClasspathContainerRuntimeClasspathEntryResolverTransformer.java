@@ -2,6 +2,7 @@ package io.github.makamys.egds.hooks;
 
 import static io.github.makamys.egds.HookConfig.log;
 
+import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.jdt.core.IJavaProject;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -18,6 +19,11 @@ public class GradleClasspathContainerRuntimeClasspathEntryResolverTransformer im
     
     /**
      * <pre>
+     * public IRuntimeClasspathEntry[] resolveRuntimeClasspathEntry(IRuntimeClasspathEntry entry, ILaunchConfiguration configuration) throws CoreException {
+     * +    Hooks.captureConfiguration(configuration);
+     * ...
+     * }
+     * 
      * private IRuntimeClasspathEntry[] resolveRuntimeClasspathEntry(IRuntimeClasspathEntry entry, IJavaProject project, LaunchConfigurationScope configurationScopes, boolean excludeTestCode, boolean moduleSupport) throws CoreException {
      * ...
      * -    PlatformUtils.supportsTestAttributes()
@@ -30,7 +36,17 @@ public class GradleClasspathContainerRuntimeClasspathEntryResolverTransformer im
             String className = classNode.name;
             String methodName = m.name;
             String methodDesc = m.desc;
-            if(methodName.equals("resolveRuntimeClasspathEntry")) {
+            if(methodName.equals("resolveRuntimeClasspathEntry") && methodDesc.equals("(Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/debug/core/ILaunchConfiguration;)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;")) {
+                log("Patching " + className + "#" + methodName + methodDesc);
+                
+                InsnList preInsns = new InsnList();
+                preInsns.add(new VarInsnNode(Opcodes.ALOAD, 2)); // ILaunchConfiguration
+                preInsns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/hooks/GradleClasspathContainerRuntimeClasspathEntryResolverTransformer$Hooks", "captureLaunchConfiguration", "(Lorg/eclipse/debug/core/ILaunchConfiguration;)V"));
+                m.instructions.insert(preInsns);
+                found++;
+            } else if(methodName.equals("resolveRuntimeClasspathEntry") && methodDesc.equals("(Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;Lorg/eclipse/jdt/core/IJavaProject;Lorg/eclipse/buildship/core/internal/launch/LaunchConfigurationScope;ZZ)[Lorg/eclipse/jdt/launching/IRuntimeClasspathEntry;")) {
+                log("Patching " + className + "#" + methodName + methodDesc);
+                
                 MethodInsnNode old = null;
                 for(int i = 0; i < m.instructions.size(); i++) {
                     AbstractInsnNode ins = m.instructions.get(i);
@@ -49,15 +65,21 @@ public class GradleClasspathContainerRuntimeClasspathEntryResolverTransformer im
                     insns.add(new VarInsnNode(Opcodes.ALOAD, 1)); // IJavaProject
                     insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/hooks/GradleClasspathContainerRuntimeClasspathEntryResolverTransformer$Hooks", "modifySupportsTestAttributes", "(ILorg/eclipse/jdt/core/IJavaProject;)I"));
                     m.instructions.insert(old, insns);
-                    found += 1;
-                    log("Patching PlatformUtils#supportsTestAttributes call in " + className + "#" + methodName + methodDesc);
+                    found++;
+                } else {
+                    log("Failed to find hook point!");
                 }
             }
         }
-        return found > 0;
+        return found == 2;
     }
     
     public static class Hooks {
+        // This is loaded by a separate classloader than AbstractJavaLaunchConfigurationDelegate so we have to load it again
+        public static void captureLaunchConfiguration(ILaunchConfiguration configuration) {
+            ClasspathModificationHelper.init(configuration);
+        }
+        
         public static int modifySupportsTestAttributes(int original, IJavaProject project) {
             if(ClasspathModificationHelper.egdsEnabled) {
                 if(original != 0) {
