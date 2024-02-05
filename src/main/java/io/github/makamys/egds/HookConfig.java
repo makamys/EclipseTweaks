@@ -20,6 +20,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 import io.github.makamys.egds.hooks.AbstractJavaLaunchConfigurationDelegateTransformer;
 import io.github.makamys.egds.hooks.GradleClasspathContainerRuntimeClasspathEntryResolverTransformer;
+import io.github.makamys.egds.hooks.JavaRuntimeTransformer;
 
 public class HookConfig implements HookConfigurator {
     
@@ -44,6 +45,7 @@ public class HookConfig implements HookConfigurator {
         
         static {
             TRANSFORMERS.put("org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate", new AbstractJavaLaunchConfigurationDelegateTransformer());
+            TRANSFORMERS.put("org.eclipse.jdt.launching.JavaRuntime", new JavaRuntimeTransformer());
             TRANSFORMERS.put("org.eclipse.buildship.core.internal.workspace.GradleClasspathContainerRuntimeClasspathEntryResolver", new GradleClasspathContainerRuntimeClasspathEntryResolverTransformer());
         }
         

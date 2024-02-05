@@ -6,11 +6,13 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.jdt.core.IClasspathAttribute;
+import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.internal.launching.RuntimeClasspathEntry;
 import org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate;
 import org.eclipse.jdt.launching.IRuntimeClasspathEntry;
@@ -31,6 +33,7 @@ public class AbstractJavaLaunchConfigurationDelegateTransformer implements IClas
     /**
      * <pre> 
      * public String[] getClasspath(ILaunchConfiguration configuration) throws CoreException {
+     * +   Hooks.captureConfiguration(configuration);
      *     IRuntimeClasspathEntry[] entries = JavaRuntime.computeUnresolvedRuntimeClasspath(configuration);
      *     entries = JavaRuntime.resolveRuntimeClasspath(entries, configuration);
      * +   entries = Hooks.modifyResolveRuntimeClasspath(entries);
@@ -44,6 +47,12 @@ public class AbstractJavaLaunchConfigurationDelegateTransformer implements IClas
             String methodDesc = m.desc;
             if(methodName.equals("getClasspath")) {
                 log("Patching " + className + "#" + methodName + methodDesc);
+                
+                InsnList preInsns = new InsnList();
+                preInsns.add(new VarInsnNode(Opcodes.ALOAD, 1)); // ILaunchConfiguration
+                preInsns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "io/github/makamys/egds/hooks/AbstractJavaLaunchConfigurationDelegateTransformer$Hooks", "captureLaunchConfiguration", "(Lorg/eclipse/debug/core/ILaunchConfiguration;)V"));
+                m.instructions.insert(preInsns);
+                
                 MethodInsnNode old = null;
                 for(int i = 0; i < m.instructions.size(); i++) {
                     AbstractInsnNode ins = m.instructions.get(i);
@@ -73,6 +82,39 @@ public class AbstractJavaLaunchConfigurationDelegateTransformer implements IClas
     }
     
     public static class Hooks {
+        public static boolean egdsEnabled;
+        public static List<String> scopes;
+        public static Config config;
+        
+        public static void captureLaunchConfiguration(ILaunchConfiguration configuration) {
+            try {
+                String args = configuration.getAttribute("org.eclipse.jdt.launching.VM_ARGUMENTS", "");
+                log("Preparing to launch");
+                log("VM args: " + args);
+                egdsEnabled = !args.contains("-Degds.disable");
+                for(String kv : args.split(" ")) {
+                    if(kv.startsWith("-Degds.scope=")) {
+                        scopes = Arrays.asList(kv.split("=")[1].split(","));
+                    }
+                }
+                if(scopes == null) {
+                    log("No scope specified, defaulting to [main]");
+                    scopes = Arrays.asList("main");
+                }
+                
+                File gradleProjectDir = JavaRuntime.getJavaProject(configuration).getResource().getLocation().toFile();
+                
+                config = Config.load(gradleProjectDir);
+                
+                log("  Enabled: " + egdsEnabled);
+                log("  Scopes: " + scopes);
+            } catch(Exception e) {
+                egdsEnabled = false;
+                log("Failed to capture launch configuration");
+                log(e);
+            }
+        }
+        
         public static IRuntimeClasspathEntry[] modifyResolveRuntimeClasspath(IRuntimeClasspathEntry[] entries, AbstractJavaLaunchConfigurationDelegate launchDelegate, ILaunchConfiguration configuration) {
             try {
                 if(!configuration.getAttribute("org.eclipse.jdt.launching.VM_ARGUMENTS", "").contains("-Degds.disable")) {
@@ -86,6 +128,9 @@ public class AbstractJavaLaunchConfigurationDelegateTransformer implements IClas
             } catch(Exception e) {
                 log("Failed to modify classpath");
                 log(e);
+            } finally {
+                // reset
+                egdsEnabled = false;
             }
             
             return entries;
@@ -102,10 +147,6 @@ public class AbstractJavaLaunchConfigurationDelegateTransformer implements IClas
         }
         
         private static IRuntimeClasspathEntry[] modifyClasspath(IRuntimeClasspathEntry[] cp, AbstractJavaLaunchConfigurationDelegate launchDelegate, ILaunchConfiguration configuration) throws Exception {
-            File gradleProjectDir = JavaRuntime.getJavaProject(configuration).getResource().getLocation().toFile();
-            
-            Config config = Config.load(gradleProjectDir);
-            
             if(config != null && !config.dependencyBlacklist.isEmpty()) {
                 log("Using blacklist");
                 return Arrays.stream(cp).filter(p -> !config.isDependencyBlacklisted(p.getLocation())).toArray(IRuntimeClasspathEntry[]::new);
@@ -115,12 +156,27 @@ public class AbstractJavaLaunchConfigurationDelegateTransformer implements IClas
             }
         }
         
-        private static boolean isMissingScope(IRuntimeClasspathEntry p) {
+        public static boolean isMissingScope(IRuntimeClasspathEntry p) {
             if(p instanceof RuntimeClasspathEntry) {
-                for(IClasspathAttribute att : p.getClasspathEntry().getExtraAttributes()) {
-                    if(att.getName().equals("gradle_used_by_scope") && att.getValue().isEmpty()) {
-                        return true;
-                    }
+                return isMissingScope(p.getClasspathEntry());
+            }
+            return false;
+        }
+        
+        public static boolean isMissingScope(IClasspathEntry p) {
+            for(IClasspathAttribute att : p.getExtraAttributes()) {
+                if(att.getName().equals("gradle_used_by_scope") && !intersects(scopes, Arrays.asList(att.getValue().split(",")))) {
+                    log(p + " This is not a good scope: " + att.getValue());
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        private static boolean intersects(List<String> a, List<String> b) {
+            for(String as : a) {
+                if(b.contains(as)) {
+                    return true;
                 }
             }
             return false;
