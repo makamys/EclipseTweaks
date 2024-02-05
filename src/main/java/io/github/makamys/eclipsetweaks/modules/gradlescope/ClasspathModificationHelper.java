@@ -27,7 +27,7 @@ public class ClasspathModificationHelper {
             log("Preparing to launch project " + configuration.getAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, (String)null));
             log("VM args: " + args);
             enabled = !args.contains("-DeclipseTweaks.gradleScope.enabled=false");
-            for(String kv : args.split(" ")) {
+            for(String kv : args.split("\\s")) {
                 if(kv.startsWith("-DeclipseTweaks.gradleScope=")) {
                     scopes = Arrays.asList(kv.split("=")[1].split(","));
                 }
