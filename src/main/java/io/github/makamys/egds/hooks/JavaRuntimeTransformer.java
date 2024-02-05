@@ -2,20 +2,8 @@ package io.github.makamys.egds.hooks;
 
 import static io.github.makamys.egds.HookConfig.log;
 
-import java.io.File;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.eclipse.debug.core.ILaunchConfiguration;
-import org.eclipse.jdt.core.IClasspathAttribute;
 import org.eclipse.jdt.core.IClasspathEntry;
-import org.eclipse.jdt.internal.launching.RuntimeClasspathEntry;
-import org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate;
-import org.eclipse.jdt.launching.IRuntimeClasspathEntry;
-import org.eclipse.jdt.launching.JavaRuntime;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -23,8 +11,9 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
-import io.github.makamys.egds.Config;
 import io.github.makamys.egds.IClassTransformer;
+import io.github.makamys.egds.Util;
+import io.github.makamys.egds.helpers.ClasspathModificationHelper;
 
 public class JavaRuntimeTransformer implements IClassTransformer {
     
@@ -74,13 +63,12 @@ public class JavaRuntimeTransformer implements IClassTransformer {
     public static class Hooks {
         public static IClasspathEntry[] modifyGetRawClasspath(IClasspathEntry[] entries) {
             try {
-                if(AbstractJavaLaunchConfigurationDelegateTransformer.Hooks.egdsEnabled) {
-                    Config config = AbstractJavaLaunchConfigurationDelegateTransformer.Hooks.config;
-                    if(!(config != null && !config.dependencyBlacklist.isEmpty())) {
+                if(ClasspathModificationHelper.egdsEnabled) {
+                    if(ClasspathModificationHelper.useScopes()) {
                         IClasspathEntry[] goodCP = Arrays.stream(entries).filter(p -> !AbstractJavaLaunchConfigurationDelegateTransformer.Hooks.isMissingScope(p)).toArray(IClasspathEntry[]::new);
                         
-                        log("\nOriginal project CP:\n" + toIndentedList(Arrays.asList(entries)) + "\n");
-                        log("Removed entries:\n" + toIndentedList(subtract(Arrays.asList(entries), Arrays.asList(goodCP))) + "\n");
+                        log("\nOriginal project CP:\n" + Util.toIndentedList(Arrays.asList(entries)) + "\n");
+                        log("Removed entries:\n" + Util.toIndentedList(Util.subtract(Arrays.asList(entries), Arrays.asList(goodCP))) + "\n");
                         
                         entries = goodCP;
                     }
@@ -91,42 +79,6 @@ public class JavaRuntimeTransformer implements IClassTransformer {
             }
             
             return entries;
-        }
-        
-        private static String toIndentedList(Collection<?> list) {
-            return String.join("\n", list.stream().map(e -> "  " + e.toString()).collect(Collectors.toList()));
-        }
-        
-        private static <T> Collection<T> subtract(Collection<T> a, Collection<T> b) {
-            Set<T> diff = new HashSet<>(a);
-            diff.removeAll(b);
-            return diff;
-        }
-        
-        private static IRuntimeClasspathEntry[] modifyClasspath(IRuntimeClasspathEntry[] cp, AbstractJavaLaunchConfigurationDelegate launchDelegate, ILaunchConfiguration configuration) throws Exception {
-            File gradleProjectDir = JavaRuntime.getJavaProject(configuration).getResource().getLocation().toFile();
-            
-            Config config = Config.load(gradleProjectDir);
-            
-            if(config != null && !config.dependencyBlacklist.isEmpty()) {
-                log("Using blacklist");
-                return Arrays.stream(cp).filter(p -> !config.isDependencyBlacklisted(p.getLocation())).toArray(IRuntimeClasspathEntry[]::new);
-            } else {
-                log("Using extra classpath attributes");
-                return Arrays.stream(cp).filter(p -> !isMissingScope(p)).toArray(IRuntimeClasspathEntry[]::new);
-            }
-        }
-        
-        private static boolean isMissingScope(IRuntimeClasspathEntry p) {
-            if(p instanceof RuntimeClasspathEntry) {
-                for(IClasspathAttribute att : p.getClasspathEntry().getExtraAttributes()) {
-                    if(att.getName().equals("gradle_used_by_scope") && !att.getValue().contains("main")) {
-                        log(p.getLocation() + " This is not a good scope: " + att.getValue());
-                        return true;
-                    }
-                }
-            }
-            return false;
         }
     }
     
