@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate;
+import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jdt.launching.JavaRuntime;
 
 import io.github.makamys.eclipsetweaks.Util;
@@ -23,7 +24,7 @@ public class ClasspathModificationHelper {
     public static void init(ILaunchConfiguration configuration) {
         try {
             String args = configuration.getAttribute("org.eclipse.jdt.launching.VM_ARGUMENTS", "");
-            log("Preparing to launch");
+            log("Preparing to launch project " + configuration.getAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, (String)null));
             log("VM args: " + args);
             enabled = !args.contains("-DeclipseTweaks.gradleScope.enabled=false");
             for(String kv : args.split(" ")) {
