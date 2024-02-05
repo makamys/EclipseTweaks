@@ -64,12 +64,11 @@ public class LaunchConfigurationScopeTransformer implements IClassTransformer {
     
     public static class Hooks {
         public static Optional<Set<String>> modifyScope(Optional<Set<String>> original, ILaunchConfiguration config) {
-            if(ClasspathModificationHelper.egdsEnabled) {
+            if(ClasspathModificationHelper.egdsEnabled && !ClasspathModificationHelper.scopes.isEmpty()) {
                 log("Forcing scope " + ClasspathModificationHelper.scopes);
                 return Optional.of(new HashSet<>(ClasspathModificationHelper.scopes));
-            } else {
-                return original;
             }
+            return original;
         }
     }
     

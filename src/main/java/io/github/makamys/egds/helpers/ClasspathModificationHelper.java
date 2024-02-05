@@ -18,6 +18,8 @@ public class ClasspathModificationHelper {
     public static boolean egdsEnabled;
     public static List<String> scopes;
     public static Config config;
+    
+    private static final List<String> DEFAULT_SCOPES = Arrays.asList("main");
 
     public static void init(ILaunchConfiguration configuration) {
         try {
@@ -31,8 +33,7 @@ public class ClasspathModificationHelper {
                 }
             }
             if(scopes == null) {
-                log("No scope specified, defaulting to [main]");
-                scopes = Arrays.asList("main");
+                scopes = Arrays.asList();
             }
             
             File gradleProjectDir = JavaRuntime.getJavaProject(configuration).getResource().getLocation().toFile();
@@ -63,8 +64,12 @@ public class ClasspathModificationHelper {
     public static boolean useScopes() {
         return config == null || config.dependencyBlacklist.isEmpty();
     }
+    
+    public static List<String> getScopeOrDefault() {
+        return !scopes.isEmpty() ? scopes : DEFAULT_SCOPES;
+    }
 
     public static boolean isGoodScope(List<String> scope) {
-        return !Util.intersects(scopes, scope);
+        return !Util.intersects(getScopeOrDefault(), scope);
     }
 }

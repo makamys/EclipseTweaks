@@ -14,9 +14,9 @@ Add this to your `eclipse.ini` below the `-vmargs` line:
 -Dosgi.framework.extensions=reference:file:/path/to/EclipseGradleDependencyScope-<version>.jar
 ```
 
-EGDS will automatically apply to every run configuration, and will exclude dependencies not in the `main` scope by default.
+EGDS will automatically apply to every run configuration. By default it will exclude dependencies not in the `main` scope for native projects, and dependencies in a different scope than the main class for Gradle projects.
 
-These VM flags can be added to run configurations to customize them:
+The following VM flags can be added to run configurations to customize them:
 
 - `-Degds.scope=myScope`: Changes the scope to `myScope`. Multiple values can be specified by separating them with commas.
 - `-Degds.disable`: Disable EGDS for one project.
